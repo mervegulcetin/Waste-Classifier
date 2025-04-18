@@ -12,13 +12,27 @@ IMAGE_SIZE = (224, 224)
 BATCH_SIZE = 32
 EPOCHS = 10
 
-# reading and splitting images
-datagen = ImageDataGenerator(
+# reading and splitting images, applying augmentation to training set
+train_datagen = ImageDataGenerator(
+    rescale=1./255,
+    validation_split=0.2,
+    rotation_range=25,
+    width_shift_range=0.1,
+    height_shift_range=0.1,
+    zoom_range=0.2,
+    brightness_range=(0.7, 1.3),
+    shear_range=0.15,
+    horizontal_flip=True,
+    fill_mode='nearest'
+)
+
+val_datagen = ImageDataGenerator(
     rescale=1./255,
     validation_split=0.2
 )
 
-train_gen = datagen.flow_from_directory(
+
+train_gen = train_datagen.flow_from_directory(
     DATASET_PATH,
     target_size=IMAGE_SIZE,
     batch_size=BATCH_SIZE,
@@ -26,7 +40,7 @@ train_gen = datagen.flow_from_directory(
     subset='training'
 )
 
-val_gen = datagen.flow_from_directory(
+val_gen = val_datagen.flow_from_directory(
     DATASET_PATH,
     target_size=IMAGE_SIZE,
     batch_size=BATCH_SIZE,
@@ -60,3 +74,9 @@ model.compile(optimizer=Adam(learning_rate=1e-5), loss='categorical_crossentropy
 
 # Training the model
 history = model.fit(train_gen, validation_data=val_gen, epochs=EPOCHS)
+
+# Accuracy in the latest epoch
+final_train_acc = history.history['accuracy'][-1]
+final_val_acc = history.history['val_accuracy'][-1]
+print(f"\nFinal Training Accuracy: {final_train_acc:.4f}")
+print(f"Final Validation Accuracy: {final_val_acc:.4f}")
