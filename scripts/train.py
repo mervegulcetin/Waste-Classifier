@@ -80,3 +80,17 @@ final_train_acc = history.history['accuracy'][-1]
 final_val_acc = history.history['val_accuracy'][-1]
 print(f"\nFinal Training Accuracy: {final_train_acc:.4f}")
 print(f"Final Validation Accuracy: {final_val_acc:.4f}")
+
+
+# loading test set
+test_gen = ImageDataGenerator(rescale=1./255).flow_from_directory(
+    "test",
+    target_size=(224, 224),
+    batch_size=32,
+    class_mode='categorical',
+    shuffle=False
+)
+
+# calculating accuracy of the test set
+loss, acc = model.evaluate(test_gen)
+print(f"🧪 Test Accuracy: {acc:.4f}")
