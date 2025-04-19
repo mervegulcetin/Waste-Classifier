@@ -10,18 +10,18 @@ import os
 DATASET_PATH = "dataset"
 IMAGE_SIZE = (224, 224)
 BATCH_SIZE = 32
-EPOCHS = 10
+EPOCHS = 15
 
 # reading and splitting images, applying augmentation to training set
 train_datagen = ImageDataGenerator(
     rescale=1./255,
     validation_split=0.2,
-    rotation_range=25,
-    width_shift_range=0.1,
-    height_shift_range=0.1,
-    zoom_range=0.2,
-    brightness_range=(0.7, 1.3),
-    shear_range=0.15,
+    rotation_range=30,
+    width_shift_range=0.2,
+    height_shift_range=0.2,
+    zoom_range=0.3,
+    brightness_range=(0.6, 1.4),
+    shear_range=0.2,
     horizontal_flip=True,
     fill_mode='nearest'
 )
