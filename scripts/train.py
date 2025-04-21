@@ -6,6 +6,10 @@ from tensorflow.keras.optimizers import Adam
 import matplotlib.pyplot as plt
 import os
 
+from sklearn.metrics import classification_report, confusion_matrix, f1_score
+import numpy as np
+import seaborn as sns
+
 # dataset path
 DATASET_PATH = "dataset"
 IMAGE_SIZE = (224, 224)
@@ -94,3 +98,31 @@ test_gen = ImageDataGenerator(rescale=1./255).flow_from_directory(
 # calculating accuracy of the test set
 loss, acc = model.evaluate(test_gen)
 print(f"🧪 Test Accuracy: {acc:.4f}")
+
+# class names
+class_names = list(test_gen.class_indices.keys())
+
+# model predictions
+y_pred = model.predict(test_gen)
+y_pred_classes = np.argmax(y_pred, axis=1)
+y_true = test_gen.classes
+
+# Classification report
+print("\n📊 Classification Report:")
+print(classification_report(y_true, y_pred_classes, target_names=class_names))
+
+# F1-score (weighted average)
+f1 = f1_score(y_true, y_pred_classes, average='weighted')
+print(f"\n✅ Weighted F1 Score: {f1:.4f}")
+
+# Confusion Matrix
+cm = confusion_matrix(y_true, y_pred_classes)
+plt.figure(figsize=(8, 6))
+sns.heatmap(cm, annot=True, fmt='d', cmap='Blues',
+            xticklabels=class_names,
+            yticklabels=class_names)
+plt.title("Confusion Matrix")
+plt.xlabel("Predicted Label")
+plt.ylabel("True Label")
+plt.tight_layout()
+plt.show()
