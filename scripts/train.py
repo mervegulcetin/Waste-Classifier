@@ -5,7 +5,7 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 import matplotlib.pyplot as plt
 import os
-
+from tensorflow.keras.callbacks import EarlyStopping
 from sklearn.metrics import classification_report, confusion_matrix, f1_score
 import numpy as np
 import seaborn as sns
@@ -13,18 +13,18 @@ import seaborn as sns
 # dataset path
 DATASET_PATH = "dataset"
 IMAGE_SIZE = (224, 224)
-BATCH_SIZE = 32
+BATCH_SIZE = 16
 EPOCHS = 15
 
 # reading and splitting images, applying augmentation to training set
 train_datagen = ImageDataGenerator(
     rescale=1./255,
     validation_split=0.2,
-    rotation_range=30,
+    rotation_range=20,
     width_shift_range=0.2,
     height_shift_range=0.2,
-    zoom_range=0.3,
-    brightness_range=(0.6, 1.4),
+    zoom_range=0.2,
+    brightness_range=(0.7, 1.3),
     shear_range=0.2,
     horizontal_flip=True,
     fill_mode='nearest'
@@ -62,27 +62,31 @@ model = Model(inputs=base_model.input, outputs=predictions)
 
 model.compile(optimizer=Adam(), loss='categorical_crossentropy', metrics=['accuracy'])
 
-#training the model
-history = model.fit(train_gen, validation_data=val_gen, epochs=EPOCHS)
+#early stopping adding (new)
+early_stop = EarlyStopping(monitor='val_loss', patience=7, restore_best_weights=True)
 
+#training the model
+#history = model.fit(train_gen, validation_data=val_gen, epochs=EPOCHS)
+history = model.fit(train_gen, validation_data=val_gen, epochs=EPOCHS, callbacks=[early_stop])
 
 # Fine Tuning
 base_model.trainable = True  # Unfreezing the base model
 
 # Fine-tuning the top layers
-for layer in base_model.layers[:-20]:  # Unfreezing the last 20 layers
+for layer in base_model.layers[:-40]:  # Unfreezing the last 20 layers
     layer.trainable = False
 
 # Compile the model with a lower learning rate
-model.compile(optimizer=Adam(learning_rate=1e-5), loss='categorical_crossentropy', metrics=['accuracy'])
+model.compile(optimizer=Adam(learning_rate=3e-5), loss='categorical_crossentropy', metrics=['accuracy'])
 
 # Training the model
-history = model.fit(train_gen, validation_data=val_gen, epochs=EPOCHS)
+#history = model.fit(train_gen, validation_data=val_gen, epochs=EPOCHS)
+history = model.fit(train_gen, validation_data=val_gen, epochs=EPOCHS, callbacks=[early_stop])
 
 # Accuracy in the latest epoch
 final_train_acc = history.history['accuracy'][-1]
 final_val_acc = history.history['val_accuracy'][-1]
-print(f"\nFinal Training Accuracy: {final_train_acc:.4f}")
+print(f"\nFinal Training Accuracy: {final_train_acc:.4f}")  
 print(f"Final Validation Accuracy: {final_val_acc:.4f}")
 
 
