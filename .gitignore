@@ -1,5 +1,6 @@
 venv/
 dataset/
+scripts/test_images/
 test/
 __pycache__/
 *.h5

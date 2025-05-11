@@ -5,26 +5,27 @@ from tensorflow.keras.models import Model
 from tensorflow.keras.optimizers import Adam
 import matplotlib.pyplot as plt
 import os
-from tensorflow.keras.callbacks import EarlyStopping
+from tensorflow.keras.callbacks import EarlyStopping, ReduceLROnPlateau, ModelCheckpoint
 from sklearn.metrics import classification_report, confusion_matrix, f1_score
 import numpy as np
 import seaborn as sns
+from sklearn.utils.class_weight import compute_class_weight
 
 # dataset path
 DATASET_PATH = "dataset"
 IMAGE_SIZE = (224, 224)
 BATCH_SIZE = 16
-EPOCHS = 15
+EPOCHS = 30
 
 # reading and splitting images, applying augmentation to training set
 train_datagen = ImageDataGenerator(
     rescale=1./255,
     validation_split=0.2,
-    rotation_range=20,
-    width_shift_range=0.2,
-    height_shift_range=0.2,
-    zoom_range=0.2,
-    brightness_range=(0.7, 1.3),
+    rotation_range=30,
+    width_shift_range=0.3,
+    height_shift_range=0.3,
+    zoom_range=0.3,
+    brightness_range=(0.5, 1.5),
     shear_range=0.2,
     horizontal_flip=True,
     fill_mode='nearest'
@@ -52,6 +53,16 @@ val_gen = val_datagen.flow_from_directory(
     subset='validation'
 )
 
+
+class_weights = compute_class_weight(
+    class_weight='balanced',
+    classes=np.unique(train_gen.classes),
+    y=train_gen.classes
+)
+
+class_weights = dict(enumerate(class_weights))
+
+
 # creating the model
 base_model = MobileNetV2(weights="imagenet", include_top=False, input_shape=(224, 224, 3))
 base_model.trainable = False 
@@ -63,8 +74,11 @@ model = Model(inputs=base_model.input, outputs=predictions)
 model.compile(optimizer=Adam(), loss='categorical_crossentropy', metrics=['accuracy'])
 
 #early stopping adding (new)
-early_stop = EarlyStopping(monitor='val_loss', patience=7, restore_best_weights=True)
+early_stop = EarlyStopping(monitor='val_loss', patience=10, restore_best_weights=True)
 
+
+reduce_lr = ReduceLROnPlateau(monitor='val_loss', factor=0.5, patience=3, verbose=1, min_lr=1e-6)
+checkpoint = ModelCheckpoint("best_model.h5", save_best_only=True, monitor="val_loss", mode="min")
 #training the model
 #history = model.fit(train_gen, validation_data=val_gen, epochs=EPOCHS)
 history = model.fit(train_gen, validation_data=val_gen, epochs=EPOCHS, callbacks=[early_stop])
@@ -77,11 +91,11 @@ for layer in base_model.layers[:-40]:  # Unfreezing the last 20 layers
     layer.trainable = False
 
 # Compile the model with a lower learning rate
-model.compile(optimizer=Adam(learning_rate=3e-5), loss='categorical_crossentropy', metrics=['accuracy'])
+model.compile(optimizer=Adam(learning_rate=1e-5), loss='categorical_crossentropy', metrics=['accuracy'])
 
 # Training the model
 #history = model.fit(train_gen, validation_data=val_gen, epochs=EPOCHS)
-history = model.fit(train_gen, validation_data=val_gen, epochs=EPOCHS, callbacks=[early_stop])
+history = model.fit(train_gen, validation_data=val_gen, epochs=EPOCHS, callbacks=[early_stop, reduce_lr, checkpoint], class_weight=class_weights)
 
 # Accuracy in the latest epoch
 final_train_acc = history.history['accuracy'][-1]
@@ -130,3 +144,7 @@ plt.xlabel("Predicted Label")
 plt.ylabel("True Label")
 plt.tight_layout()
 plt.show()
+
+#save model
+model.save('waste_classifier_model.h5')
+print("Model file saved: waste_classifier_model.h5")
